@@ -1,0 +1,1082 @@
+<!doctype html>
+<html lang="en" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phrasal Verb Flashcards - Christmas Edition</title>
+  <script src="/_sdk/data_sdk.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      box-sizing: border-box;
+    }
+    
+    .flashcard {
+      perspective: 1000px;
+      cursor: pointer;
+    }
+    
+    .flashcard-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transition: transform 0.6s;
+      transform-style: preserve-3d;
+    }
+    
+    .flashcard.flipped .flashcard-inner {
+      transform: rotateY(180deg);
+    }
+    
+    .flashcard-front, .flashcard-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      border-radius: 1rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      border: 3px solid #fef08a;
+    }
+    
+    .flashcard-back {
+      transform: rotateY(180deg);
+    }
+    
+    .mastered-badge {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      font-size: 2rem;
+    }
+    
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .card-animate {
+      animation: slideIn 0.4s ease-out forwards;
+    }
+    
+    @keyframes fall {
+      0% {
+        top: -10%;
+      }
+      100% {
+        top: 100%;
+      }
+    }
+    
+    .snowflake {
+      position: absolute;
+      color: white;
+      font-size: 1.5em;
+      animation: fall linear infinite;
+      opacity: 0.8;
+    }
+    
+    .jeopardy-cell {
+      background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+      border: 3px solid #fef08a;
+      cursor: pointer;
+      transition: all 0.3s;
+      min-height: 100px;
+    }
+    
+    .jeopardy-cell:hover:not(.answered) {
+      transform: scale(1.05);
+      box-shadow: 0 8px 16px rgba(254, 240, 138, 0.5);
+    }
+    
+    .jeopardy-cell.answered {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+ </head>
+ <body class="h-full"><!-- Snowflakes Container -->
+  <div id="snowflakes-container" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;"></div>
+  <div id="app" class="h-full w-full overflow-auto" style="background-image: url('https://i.imgur.com/PsxZdAC.jpeg'); background-size: cover; background-position: center; background-attachment: fixed;"><!-- Logo -->
+   <div style="position: fixed; top: 20px; left: 20px; z-index: 100;"><a href="https://vk.com/club221025676" target="_blank" rel="noopener noreferrer"> <img src="https://i.imgur.com/QC0aRsL.jpeg" alt="Logo" style="width: 80px; height: 80px; border-radius: 50%; border: 3px solid #ffffff; box-shadow: 0 4px 8px rgba(0,0,0,0.3); transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" onerror="this.style.display='none'"> </a>
+   </div>
+   <div class="main-container mx-auto px-4 py-8 max-w-6xl" style="position: relative; z-index: 10;"><!-- Main Menu Screen -->
+    <div id="menu-screen">
+     <header class="text-center mb-8 mt-16">
+      <h1 class="text-5xl font-bold mb-4" style="color: #ffffff; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">🎄 Phrasal Verbs Christmas Edition 🎅</h1>
+      <p class="text-xl mb-6" style="color: #fff8dc; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">⭐ Learn phrasal verbs in a festive winter wonderland! ❄️</p>
+     </header>
+     <div class="flex flex-col items-center gap-6 max-w-md mx-auto"><button id="flashcards-mode-btn" class="w-full px-8 py-6 rounded-2xl font-bold text-2xl transition-all hover:scale-105 shadow-2xl" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: #ffffff; border: 3px solid #fef08a;"> 🎴 Flashcards Mode </button> <button id="jeopardy-mode-btn" class="w-full px-8 py-6 rounded-2xl font-bold text-2xl transition-all hover:scale-105 shadow-2xl" style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); color: #ffffff; border: 3px solid #fef08a;"> 🎯 Jeopardy Game </button>
+     </div>
+     <div class="text-center mt-12">
+      <p class="text-lg" style="color: #ffffff; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">🎁 Choose your learning adventure! 🎁</p>
+     </div>
+    </div><!-- Flashcards Screen -->
+    <div id="flashcards-screen" style="display: none;">
+     <header class="text-center mb-6 mt-16">
+      <h1 id="app-title" class="text-4xl font-bold mb-2" style="color: #ffffff; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">🎄 Phrasal Verb Flashcards 🎄</h1>
+      <p id="instructions" class="text-lg mb-4" style="color: #fff8dc; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">❄️ Click cards to flip and reveal definitions ❄️</p><button id="back-to-menu-1" class="px-6 py-2 rounded-lg font-semibold transition-all hover:scale-105" style="background: rgba(255, 255, 255, 0.2); color: #ffffff; border: 2px solid #ffffff;"> ⬅️ Back to Menu </button>
+     </header>
+     <div class="flex justify-center gap-4 mb-6"><button id="shuffle-btn" class="px-6 py-3 rounded-lg font-semibold transition-all hover:scale-105 shadow-lg" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: #ffffff; border: 2px solid #fef08a;"> 🔀 Shuffle Cards </button> <button id="reset-btn" class="px-6 py-3 rounded-lg font-semibold transition-all hover:scale-105 shadow-lg" style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); color: #ffffff; border: 2px solid #fef08a;"> 🔄 Reset Progress </button>
+     </div>
+     <div class="mb-6 p-4 rounded-lg text-center shadow-lg" style="background: rgba(255, 255, 255, 0.9); border: 3px solid #fef08a;">
+      <p class="text-lg font-semibold" style="color: #dc2626;">⭐ Progress: <span id="progress-text">0/12</span> Mastered 🎁</p>
+      <div class="w-full h-3 rounded-full mt-2" style="background: rgba(220, 38, 38, 0.2);">
+       <div id="progress-bar" class="h-full rounded-full transition-all duration-500" style="width: 0%; background: linear-gradient(90deg, #dc2626 0%, #16a34a 100%);"></div>
+      </div>
+     </div>
+     <div id="cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+     </div>
+    </div><!-- Jeopardy Screen -->
+    <div id="jeopardy-screen" style="display: none;">
+     <header class="text-center mb-6 mt-16">
+      <h1 class="text-4xl font-bold mb-2" style="color: #ffffff; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">🎯 Phrasal Verbs Jeopardy 🎄</h1>
+      <p class="text-lg mb-4" style="color: #fff8dc; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">❄️ Two teams compete for points! ⭐</p><button id="back-to-menu-2" class="px-6 py-2 rounded-lg font-semibold transition-all hover:scale-105" style="background: rgba(255, 255, 255, 0.2); color: #ffffff; border: 2px solid #ffffff;"> ⬅️ Back to Menu </button>
+     </header>
+     <div class="grid grid-cols-2 gap-4 mb-6 max-w-4xl mx-auto">
+      <div id="team1-card" class="p-6 rounded-lg text-center shadow-lg transition-all" style="background: rgba(255, 255, 255, 0.9); border: 4px solid #fef08a;">
+       <p class="text-xl font-bold mb-2" style="color: #dc2626;">🎄 <span id="team1-name">Team 1</span> 🎄</p>
+       <p class="text-3xl font-bold" style="color: #15803d;"><span id="team1-score">0</span> pts</p><button class="mt-2 px-3 py-1 rounded text-sm font-semibold edit-team-btn" data-team="1" style="background: #dc2626; color: #ffffff;">✏️ Edit Name</button>
+      </div>
+      <div id="team2-card" class="p-6 rounded-lg text-center shadow-lg transition-all" style="background: rgba(255, 255, 255, 0.9); border: 4px solid #fef08a;">
+       <p class="text-xl font-bold mb-2" style="color: #1e40af;">⛄ <span id="team2-name">Team 2</span> ⛄</p>
+       <p class="text-3xl font-bold" style="color: #15803d;"><span id="team2-score">0</span> pts</p><button class="mt-2 px-3 py-1 rounded text-sm font-semibold edit-team-btn" data-team="2" style="background: #1e40af; color: #ffffff;">✏️ Edit Name</button>
+      </div>
+     </div>
+     <div class="mb-4 p-4 rounded-lg text-center shadow-lg" style="background: rgba(255, 255, 255, 0.95); border: 3px solid #fef08a;">
+      <p class="text-lg font-bold" style="color: #1f2937;">🎯 Current Turn: <span id="current-turn" style="color: #dc2626;">Team 1</span></p>
+     </div>
+     <div class="mb-6 p-4 rounded-lg shadow-lg" style="background: rgba(255, 255, 255, 0.9); border: 3px solid #fef08a;">
+      <p class="text-center text-lg font-semibold mb-3" style="color: #1f2937;">⏱️ Timer Settings</p>
+      <div class="flex items-center justify-center gap-4"><button id="timer-decrease" class="px-4 py-2 rounded-lg font-bold text-xl" style="background: #dc2626; color: #ffffff;">➖</button> <span class="text-2xl font-bold" style="color: #dc2626;"><span id="timer-display">30</span>s</span> <button id="timer-increase" class="px-4 py-2 rounded-lg font-bold text-xl" style="background: #16a34a; color: #ffffff;">➕</button>
+      </div>
+     </div>
+     <div id="jeopardy-board" class="mb-6"></div>
+     <div class="text-center mt-6"><button id="show-final-scores" class="px-8 py-4 rounded-lg font-bold text-xl transition-all hover:scale-105 shadow-lg" style="background: linear-gradient(135deg, #ca8a04 0%, #a16207 100%); color: #ffffff; border: 3px solid #fef08a;"> 🏆 Show Final Scores 🏆 </button>
+     </div>
+    </div>
+    <div id="toast" class="fixed bottom-6 right-6 px-6 py-3 rounded-lg font-semibold shadow-lg transform translate-y-24 transition-transform duration-300" style="background: linear-gradient(135deg, #dc2626 0%, #16a34a 100%); color: #ffffff; border: 2px solid #fef08a; z-index: 1000;">
+     🎄 Card marked as mastered! 🎄
+    </div>
+   </div>
+  </div>
+  <script>
+    const defaultConfig = {
+      app_title: "Phrasal Verb Flashcards",
+      instructions_text: "Click cards to flip and reveal definitions",
+      shuffle_button_text: "Shuffle Cards",
+      reset_button_text: "Reset Progress",
+      flashcards_button: "Flashcards Mode",
+      jeopardy_button: "Jeopardy Game",
+      back_button_text: "Back to Menu",
+      background_color: "#1e3a8a",
+      card_front_color: "#ffffff",
+      card_back_color: "#f0fdf4",
+      text_color: "#1f2937",
+      accent_color: "#dc2626",
+      font_family: "system-ui, -apple-system, sans-serif",
+      font_size: 16
+    };
+    
+    const phrasalVerbs = [
+      { id: "1", verb: "come across", definition: "to find or meet by chance" },
+      { id: "2", verb: "run into", definition: "to meet someone unexpectedly" },
+      { id: "3", verb: "break into", definition: "to enter a place illegally or by force" },
+      { id: "4", verb: "break out", definition: "to escape or start suddenly (war, fire, disease)" },
+      { id: "5", verb: "take over", definition: "to gain control of something" },
+      { id: "6", verb: "pass out", definition: "to lose consciousness; to faint" },
+      { id: "7", verb: "get over", definition: "to recover from something (illness, disappointment)" },
+      { id: "8", verb: "make up", definition: "to invent a story; to reconcile after an argument" },
+      { id: "9", verb: "turn up", definition: "to arrive or appear, often unexpectedly" },
+      { id: "10", verb: "carry on", definition: "to continue doing something" },
+      { id: "11", verb: "figure out", definition: "to understand or solve something" },
+      { id: "12", verb: "set off", definition: "to begin a journey; to cause something to start" }
+    ];
+    
+    const jeopardyQuestions = [
+      { id: "st-100", category: "Simple Tenses", points: 100, question: "I always ___ my old friends when I visit my hometown.", answer: "run into" },
+      { id: "st-200", category: "Simple Tenses", points: 200, question: "She usually ___ interesting books at the library.", answer: "comes across" },
+      { id: "st-300", category: "Simple Tenses", points: 300, question: "They ___ their business every morning at 9 AM.", answer: "carry on" },
+      { id: "st-400", category: "Simple Tenses", points: 400, question: "He often ___ late to parties.", answer: "turns up" },
+      { id: "st-500", category: "Simple Tenses", points: 500, question: "We always ___ on our journey at dawn.", answer: "set off" },
+      { id: "cd-100", category: "Conditional I & II", points: 100, question: "If you drink too much, you will ___.", answer: "pass out" },
+      { id: "cd-200", category: "Conditional I & II", points: 200, question: "If I ___ the answer, I would tell you.", answer: "figured out" },
+      { id: "cd-300", category: "Conditional I & II", points: 300, question: "If they had security, thieves wouldn't ___ the building.", answer: "break into" },
+      { id: "cd-400", category: "Conditional I & II", points: 400, question: "If we apologize, we will ___ after the argument.", answer: "make up" },
+      { id: "cd-500", category: "Conditional I & II", points: 500, question: "If you were sick, it would take time to ___ the illness.", answer: "get over" },
+      { id: "ps-100", category: "Past Simple/Continuous/Perfect", points: 100, question: "Yesterday, I ___ an old photo in the attic.", answer: "came across" },
+      { id: "ps-200", category: "Past Simple/Continuous/Perfect", points: 200, question: "The fire ___ in the middle of the night.", answer: "broke out" },
+      { id: "ps-300", category: "Past Simple/Continuous/Perfect", points: 300, question: "The new CEO ___ the company last month.", answer: "took over" },
+      { id: "ps-400", category: "Past Simple/Continuous/Perfect", points: 400, question: "While I was working, I ___ the solution to the problem.", answer: "figured out" },
+      { id: "ps-500", category: "Past Simple/Continuous/Perfect", points: 500, question: "We have ___ working on this project since January.", answer: "carried on" }
+    ];
+    
+    let audioContext = null;
+    
+    function initAudio() {
+      try {
+        if (!audioContext) {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+      } catch (e) {
+        // Audio not supported
+      }
+    }
+    
+    function playSound(type) {
+      try {
+        initAudio();
+        if (!audioContext) return;
+        
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        if (type === 'correct') {
+          oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime);
+          oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1);
+          oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2);
+          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.4);
+        } else if (type === 'wrong') {
+          oscillator.frequency.setValueAtTime(392.00, audioContext.currentTime);
+          oscillator.frequency.setValueAtTime(329.63, audioContext.currentTime + 0.15);
+          oscillator.type = 'triangle';
+          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.3);
+        } else if (type === 'flip') {
+          oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+          oscillator.frequency.exponentialRampToValueAtTime(600, audioContext.currentTime + 0.15);
+          oscillator.type = 'sine';
+          gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.15);
+        } else if (type === 'final') {
+          const frequencies = [523.25, 659.25, 783.99, 1046.50];
+          frequencies.forEach((freq, i) => {
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            osc.frequency.setValueAtTime(freq, audioContext.currentTime + i * 0.15);
+            gain.gain.setValueAtTime(0.2, audioContext.currentTime + i * 0.15);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + i * 0.15 + 0.3);
+            osc.start(audioContext.currentTime + i * 0.15);
+            osc.stop(audioContext.currentTime + i * 0.15 + 0.3);
+          });
+        }
+      } catch (e) {
+        // Silent fail
+      }
+    }
+    
+    let currentOrder = [...phrasalVerbs];
+    let progressData = [];
+    let isInitialized = false;
+    let team1Score = 0;
+    let team2Score = 0;
+    let team1Name = 'Team 1';
+    let team2Name = 'Team 2';
+    let currentTeam = 1;
+    let answeredQuestions = new Set();
+    let currentScreen = 'menu';
+    let timerSeconds = 30;
+    let timerInterval = null;
+    
+    const dataHandler = {
+      onDataChanged(data) {
+        progressData = data;
+        if (currentScreen === 'flashcards') {
+          updateProgressDisplay();
+          renderCards();
+        }
+      }
+    };
+    
+    async function initializeApp() {
+      try {
+        const initResult = await window.dataSdk.init(dataHandler);
+        if (!initResult.isOk) {
+          return;
+        }
+        isInitialized = true;
+      } catch (error) {
+        // Initialization failed
+      }
+    }
+    
+    function createSnowflakes() {
+      const container = document.getElementById('snowflakes-container');
+      if (!container) return;
+      
+      const snowflakes = ['❄️', '⛄', '🎄', '⭐'];
+      
+      for (let i = 0; i < 20; i++) {
+        const snowflake = document.createElement('div');
+        snowflake.className = 'snowflake';
+        snowflake.textContent = snowflakes[Math.floor(Math.random() * snowflakes.length)];
+        snowflake.style.left = Math.random() * 100 + '%';
+        snowflake.style.animationDuration = (Math.random() * 3 + 2) + 's';
+        snowflake.style.animationDelay = Math.random() * 5 + 's';
+        snowflake.style.fontSize = (Math.random() * 10 + 20) + 'px';
+        container.appendChild(snowflake);
+      }
+    }
+    
+    function showScreen(screen) {
+      currentScreen = screen;
+      const menuScreen = document.getElementById('menu-screen');
+      const flashcardsScreen = document.getElementById('flashcards-screen');
+      const jeopardyScreen = document.getElementById('jeopardy-screen');
+      
+      if (menuScreen) menuScreen.style.display = screen === 'menu' ? 'block' : 'none';
+      if (flashcardsScreen) flashcardsScreen.style.display = screen === 'flashcards' ? 'block' : 'none';
+      if (jeopardyScreen) jeopardyScreen.style.display = screen === 'jeopardy' ? 'block' : 'none';
+      
+      if (screen === 'flashcards') {
+        renderCards();
+        updateProgressDisplay();
+      } else if (screen === 'jeopardy') {
+        team1Score = 0;
+        team2Score = 0;
+        currentTeam = 1;
+        answeredQuestions.clear();
+        const team1ScoreEl = document.getElementById('team1-score');
+        const team2ScoreEl = document.getElementById('team2-score');
+        const team1NameEl = document.getElementById('team1-name');
+        const team2NameEl = document.getElementById('team2-name');
+        
+        if (team1ScoreEl) team1ScoreEl.textContent = '0';
+        if (team2ScoreEl) team2ScoreEl.textContent = '0';
+        if (team1NameEl) team1NameEl.textContent = team1Name;
+        if (team2NameEl) team2NameEl.textContent = team2Name;
+        
+        renderJeopardyBoard();
+        updateTeamHighlight();
+        updateCurrentTurnDisplay();
+      }
+    }
+    
+    function getProgressForVerb(verbId) {
+      return progressData.find(p => p.verb_id === verbId);
+    }
+    
+    function updateProgressDisplay() {
+      const masteredCount = progressData.filter(p => p.mastered).length;
+      const total = phrasalVerbs.length;
+      const percentage = (masteredCount / total) * 100;
+      
+      const progressText = document.getElementById('progress-text');
+      const progressBar = document.getElementById('progress-bar');
+      
+      if (progressText) progressText.textContent = `${masteredCount}/${total}`;
+      if (progressBar) progressBar.style.width = `${percentage}%`;
+    }
+    
+    function renderCards() {
+      const container = document.getElementById('cards-container');
+      if (!container) return;
+      
+      container.innerHTML = '';
+      
+      currentOrder.forEach((verb, index) => {
+        const progress = getProgressForVerb(verb.id);
+        const isMastered = progress?.mastered || false;
+        
+        const card = document.createElement('div');
+        card.className = 'flashcard card-animate';
+        card.style.animationDelay = `${index * 0.05}s`;
+        card.dataset.verbId = verb.id;
+        
+        card.innerHTML = `
+          <div class="flashcard-inner" style="height: 220px;">
+            <div class="flashcard-front" style="background: linear-gradient(135deg, #ffffff 0%, #fef3c7 100%);">
+              ${isMastered ? '<span class="mastered-badge">✅</span>' : ''}
+              <div class="text-center">
+                <p class="text-3xl mb-2">🎁</p>
+                <p class="text-2xl font-bold" style="color: #dc2626;">${verb.verb}</p>
+              </div>
+            </div>
+            <div class="flashcard-back" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);">
+              <div class="text-center">
+                <p class="text-xl mb-2">⭐</p>
+                <p class="text-lg mb-4" style="color: #15803d;">${verb.definition}</p>
+                <button class="mt-4 px-4 py-2 rounded-lg font-semibold mark-mastered-btn shadow-lg" 
+                        style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); color: #ffffff; border: 2px solid #fef08a;"
+                        ${isMastered ? 'disabled' : ''}>
+                  ${isMastered ? '✅ Mastered' : '🎄 Mark as Mastered'}
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+        
+        container.appendChild(card);
+        
+        card.addEventListener('click', (e) => {
+          if (!e.target.classList.contains('mark-mastered-btn')) {
+            playSound('flip');
+            card.classList.toggle('flipped');
+          }
+        });
+        
+        const masteredBtn = card.querySelector('.mark-mastered-btn');
+        if (masteredBtn && !isMastered) {
+          masteredBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            await markAsMastered(verb.id);
+          });
+        }
+      });
+    }
+    
+    function renderJeopardyBoard() {
+      const board = document.getElementById('jeopardy-board');
+      if (!board) return;
+      
+      const categories = ['Simple Tenses', 'Conditional I & II', 'Past Simple/Continuous/Perfect'];
+      const points = [100, 200, 300, 400, 500];
+      
+      let html = '<div class="grid grid-cols-3 gap-4">';
+      
+      categories.forEach(cat => {
+        html += `<div class="p-4 rounded-lg text-center font-bold text-xl" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: #fef08a; border: 3px solid #fef08a; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">
+          ${cat}
+        </div>`;
+      });
+      
+      points.forEach(point => {
+        categories.forEach(cat => {
+          const question = jeopardyQuestions.find(q => q.category === cat && q.points === point);
+          if (!question) return;
+          
+          const isAnswered = answeredQuestions.has(question.id);
+          
+          html += `<div class="jeopardy-cell ${isAnswered ? 'answered' : ''} p-6 rounded-lg text-center" 
+                        data-question-id="${question.id}">
+            <p class="text-4xl font-bold" style="color: #fef08a; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">
+              ${isAnswered ? '✅' : `$${point}`}
+            </p>
+          </div>`;
+        });
+      });
+      
+      html += '</div>';
+      board.innerHTML = html;
+      
+      document.querySelectorAll('.jeopardy-cell:not(.answered)').forEach(cell => {
+        cell.addEventListener('click', () => {
+          const questionId = cell.dataset.questionId;
+          if (questionId) showJeopardyQuestion(questionId);
+        });
+      });
+    }
+    
+    function showJeopardyQuestion(questionId) {
+      const question = jeopardyQuestions.find(q => q.id === questionId);
+      if (!question || answeredQuestions.has(questionId)) return;
+      
+      let timeLeft = timerSeconds;
+      
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 flex items-center justify-center z-50';
+      modal.style.background = 'rgba(0, 0, 0, 0.8)';
+      modal.innerHTML = `
+        <div class="p-8 rounded-2xl shadow-2xl max-w-2xl w-full mx-4" style="background: linear-gradient(135deg, #ffffff 0%, #fef3c7 100%); border: 4px solid #fef08a;">
+          <div class="text-center mb-6">
+            <p class="text-2xl font-bold mb-2" style="color: #dc2626;">🎯 $${question.points} Question 🎯</p>
+            <p class="text-sm mb-2" style="color: #15803d;">Category: ${question.category}</p>
+            <p class="text-3xl font-bold" style="color: #dc2626;">⏱️ <span id="question-timer">${timeLeft}</span>s</p>
+          </div>
+          <p class="text-xl mb-6 text-center font-semibold" style="color: #1f2937;">${question.question}</p>
+          <input type="text" id="answer-input" placeholder="Type your answer..." 
+                 class="w-full p-4 rounded-lg mb-4 text-lg border-3" 
+                 style="border: 3px solid #fef08a; background: #ffffff;">
+          <div class="flex gap-3 mb-4">
+            <button id="submit-answer" class="flex-1 px-6 py-3 rounded-lg font-semibold text-lg shadow-lg" 
+                    style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); color: #ffffff; border: 2px solid #fef08a;">
+              ✅ Submit Answer
+            </button>
+            <button id="show-answer" class="flex-1 px-6 py-3 rounded-lg font-semibold text-lg shadow-lg" 
+                    style="background: linear-gradient(135deg, #ca8a04 0%, #a16207 100%); color: #ffffff; border: 2px solid #fef08a;">
+              💡 Show Answer
+            </button>
+          </div>
+          <div id="answer-reveal" class="text-center mb-4 p-4 rounded-lg" style="background: rgba(22, 163, 74, 0.1); display: none;">
+            <p class="text-lg font-bold" style="color: #15803d;">✅ Correct Answer: <span style="color: #dc2626;">${question.answer}</span></p>
+          </div>
+          <button id="close-modal" class="w-full px-6 py-3 rounded-lg font-semibold text-lg shadow-lg" 
+                  style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: #ffffff; border: 2px solid #fef08a;">
+            ❌ Close
+          </button>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+      const answerInput = document.getElementById('answer-input');
+      if (answerInput) answerInput.focus();
+      
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        const timerDisplay = document.getElementById('question-timer');
+        if (timerDisplay) {
+          timerDisplay.textContent = timeLeft;
+        }
+        
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          playSound('wrong');
+          const revealDiv = document.getElementById('answer-reveal');
+          const submitBtn = document.getElementById('submit-answer');
+          if (revealDiv) revealDiv.style.display = 'block';
+          if (submitBtn) submitBtn.disabled = true;
+          if (answerInput) answerInput.disabled = true;
+          switchTeam();
+          answeredQuestions.add(questionId);
+          renderJeopardyBoard();
+        }
+      }, 1000);
+      
+      const showAnswerBtn = document.getElementById('show-answer');
+      if (showAnswerBtn) {
+        showAnswerBtn.addEventListener('click', () => {
+          clearInterval(timerInterval);
+          playSound('wrong');
+          if (currentTeam === 1) {
+            team1Score = Math.max(0, team1Score - question.points);
+            const scoreEl = document.getElementById('team1-score');
+            if (scoreEl) scoreEl.textContent = team1Score;
+          } else {
+            team2Score = Math.max(0, team2Score - question.points);
+            const scoreEl = document.getElementById('team2-score');
+            if (scoreEl) scoreEl.textContent = team2Score;
+          }
+          const revealDiv = document.getElementById('answer-reveal');
+          const submitBtn = document.getElementById('submit-answer');
+          if (revealDiv) revealDiv.style.display = 'block';
+          if (submitBtn) submitBtn.disabled = true;
+          if (answerInput) answerInput.disabled = true;
+          answeredQuestions.add(questionId);
+          renderJeopardyBoard();
+          showToast(`-${question.points} points for viewing answer`);
+          switchTeam();
+        });
+      }
+      
+      const submitAnswerHandler = () => {
+        checkJeopardyAnswer(questionId, modal, question);
+      };
+      
+      const submitBtn = document.getElementById('submit-answer');
+      if (submitBtn) {
+        submitBtn.addEventListener('click', submitAnswerHandler);
+      }
+      
+      if (answerInput) {
+        answerInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            submitAnswerHandler();
+          }
+        });
+      }
+      
+      const closeBtn = document.getElementById('close-modal');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+          clearInterval(timerInterval);
+          if (modal && modal.parentNode) {
+            document.body.removeChild(modal);
+          }
+        });
+      }
+    }
+    
+    function checkJeopardyAnswer(questionId, modal, question) {
+      clearInterval(timerInterval);
+      const answerInput = document.getElementById('answer-input');
+      const userAnswer = answerInput ? answerInput.value.trim().toLowerCase() : '';
+      const correctAnswer = question.answer.toLowerCase();
+      
+      answeredQuestions.add(questionId);
+      
+      if (userAnswer === correctAnswer) {
+        playSound('correct');
+        if (currentTeam === 1) {
+          team1Score += question.points;
+          const scoreEl = document.getElementById('team1-score');
+          if (scoreEl) scoreEl.textContent = team1Score;
+        } else {
+          team2Score += question.points;
+          const scoreEl = document.getElementById('team2-score');
+          if (scoreEl) scoreEl.textContent = team2Score;
+        }
+        showToast(`🎄 ${currentTeam === 1 ? team1Name : team2Name} correct! +${question.points} points! 🎁`);
+        if (modal && modal.parentNode) {
+          document.body.removeChild(modal);
+        }
+        renderJeopardyBoard();
+        switchTeam();
+      } else {
+        playSound('wrong');
+        if (currentTeam === 1) {
+          team1Score = Math.max(0, team1Score - question.points);
+          const scoreEl = document.getElementById('team1-score');
+          if (scoreEl) scoreEl.textContent = team1Score;
+        } else {
+          team2Score = Math.max(0, team2Score - question.points);
+          const scoreEl = document.getElementById('team2-score');
+          if (scoreEl) scoreEl.textContent = team2Score;
+        }
+        showToast(`❌ Wrong! -${question.points} points. Answer: ${question.answer}`);
+        if (modal && modal.parentNode) {
+          document.body.removeChild(modal);
+        }
+        renderJeopardyBoard();
+        switchTeam();
+      }
+    }
+    
+    function switchTeam() {
+      currentTeam = currentTeam === 1 ? 2 : 1;
+      updateCurrentTurnDisplay();
+      updateTeamHighlight();
+    }
+    
+    function updateCurrentTurnDisplay() {
+      const turnElement = document.getElementById('current-turn');
+      if (turnElement) {
+        turnElement.textContent = currentTeam === 1 ? team1Name : team2Name;
+        turnElement.style.color = currentTeam === 1 ? '#dc2626' : '#1e40af';
+      }
+    }
+    
+    function editTeamName(teamNumber) {
+      const currentName = teamNumber === 1 ? team1Name : team2Name;
+      
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 flex items-center justify-center z-50';
+      modal.style.background = 'rgba(0, 0, 0, 0.8)';
+      modal.innerHTML = `
+        <div class="p-8 rounded-2xl shadow-2xl max-w-md w-full mx-4" style="background: linear-gradient(135deg, #ffffff 0%, #fef3c7 100%); border: 4px solid #fef08a;">
+          <p class="text-2xl font-bold mb-4 text-center" style="color: ${teamNumber === 1 ? '#dc2626' : '#1e40af'};">
+            ✏️ Edit Team ${teamNumber} Name
+          </p>
+          <input type="text" id="team-name-input" value="${currentName}" maxlength="20"
+                 class="w-full p-4 rounded-lg mb-4 text-lg border-3 text-center font-bold" 
+                 style="border: 3px solid #fef08a; background: #ffffff;">
+          <div class="flex gap-3">
+            <button id="save-team-name" class="flex-1 px-6 py-3 rounded-lg font-semibold text-lg shadow-lg" 
+                    style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); color: #ffffff; border: 2px solid #fef08a;">
+              ✅ Save
+            </button>
+            <button id="cancel-team-name" class="flex-1 px-6 py-3 rounded-lg font-semibold text-lg shadow-lg" 
+                    style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color: #ffffff; border: 2px solid #fef08a;">
+              ❌ Cancel
+            </button>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+      const teamNameInput = document.getElementById('team-name-input');
+      if (teamNameInput) {
+        teamNameInput.focus();
+        teamNameInput.select();
+      }
+      
+      const saveHandler = () => {
+        const newName = teamNameInput ? teamNameInput.value.trim() : '';
+        if (newName) {
+          if (teamNumber === 1) {
+            team1Name = newName;
+            const nameEl = document.getElementById('team1-name');
+            if (nameEl) nameEl.textContent = newName;
+          } else {
+            team2Name = newName;
+            const nameEl = document.getElementById('team2-name');
+            if (nameEl) nameEl.textContent = newName;
+          }
+          updateCurrentTurnDisplay();
+          showToast(`✅ Team name updated to: ${newName}`);
+        }
+        if (modal && modal.parentNode) {
+          document.body.removeChild(modal);
+        }
+      };
+      
+      const saveBtn = document.getElementById('save-team-name');
+      if (saveBtn) {
+        saveBtn.addEventListener('click', saveHandler);
+      }
+      
+      const cancelBtn = document.getElementById('cancel-team-name');
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+          if (modal && modal.parentNode) {
+            document.body.removeChild(modal);
+          }
+        });
+      }
+      
+      if (teamNameInput) {
+        teamNameInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            saveHandler();
+          }
+        });
+      }
+    }
+    
+    function updateTeamHighlight() {
+      const team1Card = document.getElementById('team1-card');
+      const team2Card = document.getElementById('team2-card');
+      
+      if (team1Card && team2Card) {
+        if (currentTeam === 1) {
+          team1Card.style.transform = 'scale(1.05)';
+          team1Card.style.boxShadow = '0 8px 20px rgba(220, 38, 38, 0.5)';
+          team2Card.style.transform = 'scale(1)';
+          team2Card.style.boxShadow = 'none';
+        } else {
+          team2Card.style.transform = 'scale(1.05)';
+          team2Card.style.boxShadow = '0 8px 20px rgba(30, 64, 175, 0.5)';
+          team1Card.style.transform = 'scale(1)';
+          team1Card.style.boxShadow = 'none';
+        }
+      }
+    }
+    
+    function showFinalScores() {
+      playSound('final');
+      const winner = team1Score > team2Score ? team1Name : team2Score > team1Score ? team2Name : 'Tie';
+      const winnerColor = team1Score > team2Score ? '#dc2626' : team2Score > team1Score ? '#1e40af' : '#ca8a04';
+      
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 flex items-center justify-center z-50';
+      modal.style.background = 'rgba(0, 0, 0, 0.9)';
+      modal.innerHTML = `
+        <div class="p-12 rounded-3xl shadow-2xl max-w-2xl w-full mx-4 text-center" style="background: linear-gradient(135deg, #ffffff 0%, #fef3c7 100%); border: 5px solid #fef08a;">
+          <p class="text-5xl mb-8">🏆</p>
+          <p class="text-4xl font-bold mb-6" style="color: ${winnerColor};">
+            ${winner === 'Tie' ? '🎄 It\'s a Tie! 🎄' : `🎄 ${winner} Wins! 🎄`}
+          </p>
+          <div class="grid grid-cols-2 gap-6 mb-8">
+            <div class="p-6 rounded-lg" style="background: rgba(220, 38, 38, 0.1); border: 3px solid #dc2626;">
+              <p class="text-xl font-bold mb-2" style="color: #dc2626;">${team1Name}</p>
+              <p class="text-4xl font-bold" style="color: #15803d;">${team1Score}</p>
+            </div>
+            <div class="p-6 rounded-lg" style="background: rgba(30, 64, 175, 0.1); border: 3px solid #1e40af;">
+              <p class="text-xl font-bold mb-2" style="color: #1e40af;">${team2Name}</p>
+              <p class="text-4xl font-bold" style="color: #15803d;">${team2Score}</p>
+            </div>
+          </div>
+          <button id="close-final" class="px-8 py-4 rounded-lg font-bold text-xl shadow-lg" 
+                  style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); color: #ffffff; border: 3px solid #fef08a;">
+            🎁 Close 🎁
+          </button>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+      
+      const closeBtn = document.getElementById('close-final');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+          if (modal && modal.parentNode) {
+            document.body.removeChild(modal);
+          }
+        });
+      }
+    }
+    
+    async function markAsMastered(verbId) {
+      if (!isInitialized) {
+        showToast("❌ Data system not ready");
+        return;
+      }
+      
+      if (progressData.length >= 999) {
+        showToast("⚠️ Maximum limit of 999 records reached");
+        return;
+      }
+      
+      const existingProgress = getProgressForVerb(verbId);
+      
+      try {
+        if (existingProgress) {
+          const updatedProgress = { ...existingProgress, mastered: true, last_reviewed: new Date().toISOString() };
+          const result = await window.dataSdk.update(updatedProgress);
+          if (result.isOk) {
+            showToast("🎄 Card marked as mastered! 🎁");
+          } else {
+            showToast("❌ Failed to update progress");
+          }
+        } else {
+          const newProgress = {
+            verb_id: verbId,
+            mastered: true,
+            last_reviewed: new Date().toISOString()
+          };
+          const result = await window.dataSdk.create(newProgress);
+          if (result.isOk) {
+            showToast("🎄 Card marked as mastered! 🎁");
+          } else {
+            showToast("❌ Failed to save progress");
+          }
+        }
+      } catch (error) {
+        showToast("❌ An error occurred");
+      }
+    }
+    
+    function shuffleCards() {
+      currentOrder = [...phrasalVerbs].sort(() => Math.random() - 0.5);
+      renderCards();
+      showToast("🔀 Cards shuffled! ❄️");
+    }
+    
+    async function resetProgress() {
+      if (!isInitialized) {
+        showToast("❌ Data system not ready");
+        return;
+      }
+      
+      const confirmReset = document.createElement('div');
+      confirmReset.className = 'fixed inset-0 flex items-center justify-center z-50';
+      confirmReset.style.background = 'rgba(0, 0, 0, 0.8)';
+      confirmReset.innerHTML = `
+        <div class="p-8 rounded-2xl shadow-2xl max-w-sm" style="background: linear-gradient(135deg, #ffffff 0%, #fef3c7 100%); border: 4px solid #fef08a;">
+          <p class="text-xl font-bold mb-6 text-center" style="color: #dc2626;">🎄 Reset all progress? 🎄</p>
+          <div class="flex gap-3">
+            <button id="confirm-reset" class="flex-1 px-6 py-3 rounded-lg font-semibold shadow-lg" 
+                    style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: #ffffff; border: 2px solid #fef08a;">
+              ✅ Reset
+            </button>
+            <button id="cancel-reset" class="flex-1 px-6 py-3 rounded-lg font-semibold shadow-lg" 
+                    style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color: #ffffff; border: 2px solid #fef08a;">
+              ❌ Cancel
+            </button>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(confirmReset);
+      
+      const confirmBtn = document.getElementById('confirm-reset');
+      if (confirmBtn) {
+        confirmBtn.addEventListener('click', async () => {
+          try {
+            for (const progress of progressData) {
+              await window.dataSdk.delete(progress);
+            }
+            showToast("🔄 Progress reset! ⭐");
+          } catch (error) {
+            showToast("❌ Failed to reset progress");
+          }
+          if (confirmReset && confirmReset.parentNode) {
+            document.body.removeChild(confirmReset);
+          }
+        });
+      }
+      
+      const cancelBtn = document.getElementById('cancel-reset');
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+          if (confirmReset && confirmReset.parentNode) {
+            document.body.removeChild(confirmReset);
+          }
+        });
+      }
+    }
+    
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      if (toast) {
+        toast.textContent = message;
+        toast.style.transform = 'translateY(0)';
+        setTimeout(() => {
+          toast.style.transform = 'translateY(24rem)';
+        }, 2500);
+      }
+    }
+    
+    async function onConfigChange(config) {
+      const titleElement = document.getElementById('app-title');
+      const instructionsElement = document.getElementById('instructions');
+      const flashcardsBtnElement = document.getElementById('flashcards-mode-btn');
+      const jeopardyBtnElement = document.getElementById('jeopardy-mode-btn');
+      const shuffleBtnElement = document.getElementById('shuffle-btn');
+      const resetBtnElement = document.getElementById('reset-btn');
+      const backBtn1Element = document.getElementById('back-to-menu-1');
+      const backBtn2Element = document.getElementById('back-to-menu-2');
+      
+      if (titleElement) {
+        titleElement.textContent = `🎄 ${config.app_title || defaultConfig.app_title} 🎄`;
+      }
+      if (instructionsElement) {
+        instructionsElement.textContent = `❄️ ${config.instructions_text || defaultConfig.instructions_text} ❄️`;
+      }
+      if (flashcardsBtnElement) {
+        flashcardsBtnElement.innerHTML = `🎴 ${config.flashcards_button || defaultConfig.flashcards_button}`;
+      }
+      if (jeopardyBtnElement) {
+        jeopardyBtnElement.innerHTML = `🎯 ${config.jeopardy_button || defaultConfig.jeopardy_button}`;
+      }
+      if (shuffleBtnElement) {
+        shuffleBtnElement.innerHTML = `🔀 ${config.shuffle_button_text || defaultConfig.shuffle_button_text}`;
+      }
+      if (resetBtnElement) {
+        resetBtnElement.innerHTML = `🔄 ${config.reset_button_text || defaultConfig.reset_button_text}`;
+      }
+      if (backBtn1Element) {
+        backBtn1Element.innerHTML = `⬅️ ${config.back_button_text || defaultConfig.back_button_text}`;
+      }
+      if (backBtn2Element) {
+        backBtn2Element.innerHTML = `⬅️ ${config.back_button_text || defaultConfig.back_button_text}`;
+      }
+    }
+    
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange,
+        mapToCapabilities: (config) => ({
+          recolorables: [
+            {
+              get: () => config.background_color || defaultConfig.background_color,
+              set: (value) => {
+                if (window.elementSdk && window.elementSdk.config) {
+                  window.elementSdk.config.background_color = value;
+                  window.elementSdk.setConfig({ background_color: value });
+                }
+              }
+            },
+            {
+              get: () => config.card_front_color || defaultConfig.card_front_color,
+              set: (value) => {
+                if (window.elementSdk && window.elementSdk.config) {
+                  window.elementSdk.config.card_front_color = value;
+                  window.elementSdk.setConfig({ card_front_color: value });
+                }
+              }
+            },
+            {
+              get: () => config.text_color || defaultConfig.text_color,
+              set: (value) => {
+                if (window.elementSdk && window.elementSdk.config) {
+                  window.elementSdk.config.text_color = value;
+                  window.elementSdk.setConfig({ text_color: value });
+                }
+              }
+            },
+            {
+              get: () => config.accent_color || defaultConfig.accent_color,
+              set: (value) => {
+                if (window.elementSdk && window.elementSdk.config) {
+                  window.elementSdk.config.accent_color = value;
+                  window.elementSdk.setConfig({ accent_color: value });
+                }
+              }
+            }
+          ],
+          borderables: [],
+          fontEditable: {
+            get: () => config.font_family || defaultConfig.font_family,
+            set: (value) => {
+              if (window.elementSdk && window.elementSdk.config) {
+                window.elementSdk.config.font_family = value;
+                window.elementSdk.setConfig({ font_family: value });
+              }
+            }
+          },
+          fontSizeable: {
+            get: () => config.font_size || defaultConfig.font_size,
+            set: (value) => {
+              if (window.elementSdk && window.elementSdk.config) {
+                window.elementSdk.config.font_size = value;
+                window.elementSdk.setConfig({ font_size: value });
+              }
+            }
+          }
+        }),
+        mapToEditPanelValues: (config) => new Map([
+          ["app_title", config.app_title || defaultConfig.app_title],
+          ["instructions_text", config.instructions_text || defaultConfig.instructions_text],
+          ["flashcards_button", config.flashcards_button || defaultConfig.flashcards_button],
+          ["jeopardy_button", config.jeopardy_button || defaultConfig.jeopardy_button],
+          ["shuffle_button_text", config.shuffle_button_text || defaultConfig.shuffle_button_text],
+          ["reset_button_text", config.reset_button_text || defaultConfig.reset_button_text],
+          ["back_button_text", config.back_button_text || defaultConfig.back_button_text]
+        ])
+      });
+    }
+    
+    const flashcardsBtn = document.getElementById('flashcards-mode-btn');
+    const jeopardyBtn = document.getElementById('jeopardy-mode-btn');
+    const backBtn1 = document.getElementById('back-to-menu-1');
+    const backBtn2 = document.getElementById('back-to-menu-2');
+    const shuffleBtn = document.getElementById('shuffle-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const timerIncBtn = document.getElementById('timer-increase');
+    const timerDecBtn = document.getElementById('timer-decrease');
+    const finalScoresBtn = document.getElementById('show-final-scores');
+    
+    if (flashcardsBtn) flashcardsBtn.addEventListener('click', () => showScreen('flashcards'));
+    if (jeopardyBtn) jeopardyBtn.addEventListener('click', () => showScreen('jeopardy'));
+    if (backBtn1) backBtn1.addEventListener('click', () => showScreen('menu'));
+    if (backBtn2) backBtn2.addEventListener('click', () => showScreen('menu'));
+    if (shuffleBtn) shuffleBtn.addEventListener('click', shuffleCards);
+    if (resetBtn) resetBtn.addEventListener('click', resetProgress);
+    
+    if (timerIncBtn) {
+      timerIncBtn.addEventListener('click', () => {
+        if (timerSeconds < 60) {
+          timerSeconds += 5;
+          const display = document.getElementById('timer-display');
+          if (display) display.textContent = timerSeconds;
+        }
+      });
+    }
+    
+    if (timerDecBtn) {
+      timerDecBtn.addEventListener('click', () => {
+        if (timerSeconds > 10) {
+          timerSeconds -= 5;
+          const display = document.getElementById('timer-display');
+          if (display) display.textContent = timerSeconds;
+        }
+      });
+    }
+    
+    if (finalScoresBtn) finalScoresBtn.addEventListener('click', showFinalScores);
+    
+    document.addEventListener('click', (e) => {
+      if (e.target.classList.contains('edit-team-btn')) {
+        const teamNum = parseInt(e.target.dataset.team);
+        if (!isNaN(teamNum)) editTeamName(teamNum);
+      }
+    });
+    
+    createSnowflakes();
+    initializeApp();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b46c2f8b232f78c',t:'MTc2NjgxNjk0Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
