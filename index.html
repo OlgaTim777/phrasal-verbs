@@ -1,11 +1,10 @@
-<!doctype html>
 <html lang="en" class="h-full">
  <head>
+  <script src="/_sdk/data_sdk.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Phrasal Verb Flashcards - Christmas Edition</title>
-  <script src="/_sdk/data_sdk.js"></script>
-  <script src="/_sdk/element_sdk.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body {
@@ -172,23 +171,6 @@
    </div>
   </div>
   <script>
-    const defaultConfig = {
-      app_title: "Phrasal Verb Flashcards",
-      instructions_text: "Click cards to flip and reveal definitions",
-      shuffle_button_text: "Shuffle Cards",
-      reset_button_text: "Reset Progress",
-      flashcards_button: "Flashcards Mode",
-      jeopardy_button: "Jeopardy Game",
-      back_button_text: "Back to Menu",
-      background_color: "#1e3a8a",
-      card_front_color: "#ffffff",
-      card_back_color: "#f0fdf4",
-      text_color: "#1f2937",
-      accent_color: "#dc2626",
-      font_family: "system-ui, -apple-system, sans-serif",
-      font_size: 16
-    };
-    
     const phrasalVerbs = [
       { id: "1", verb: "come across", definition: "to find or meet by chance" },
       { id: "2", verb: "run into", definition: "to meet someone unexpectedly" },
@@ -290,7 +272,6 @@
     
     let currentOrder = [...phrasalVerbs];
     let progressData = [];
-    let isInitialized = false;
     let team1Score = 0;
     let team2Score = 0;
     let team1Name = 'Team 1';
@@ -301,25 +282,32 @@
     let timerSeconds = 30;
     let timerInterval = null;
     
-    const dataHandler = {
-      onDataChanged(data) {
-        progressData = data;
-        if (currentScreen === 'flashcards') {
-          updateProgressDisplay();
-          renderCards();
-        }
-      }
-    };
-    
-    async function initializeApp() {
+    // Load progress from localStorage
+    function loadProgressFromStorage() {
       try {
-        const initResult = await window.dataSdk.init(dataHandler);
-        if (!initResult.isOk) {
-          return;
+        const stored = localStorage.getItem('phrasal_verbs_progress');
+        if (stored) {
+          progressData = JSON.parse(stored);
         }
-        isInitialized = true;
-      } catch (error) {
-        // Initialization failed
+      } catch (e) {
+        progressData = [];
+      }
+    }
+    
+    // Save progress to localStorage
+    function saveProgressToStorage() {
+      try {
+        localStorage.setItem('phrasal_verbs_progress', JSON.stringify(progressData));
+      } catch (e) {
+        // Storage failed
+      }
+    }
+    
+    function initializeApp() {
+      loadProgressFromStorage();
+      if (currentScreen === 'flashcards') {
+        updateProgressDisplay();
+        renderCards();
       }
     }
     
@@ -808,40 +796,23 @@
     }
     
     async function markAsMastered(verbId) {
-      if (!isInitialized) {
-        showToast("❌ Data system not ready");
-        return;
-      }
-      
-      if (progressData.length >= 999) {
-        showToast("⚠️ Maximum limit of 999 records reached");
-        return;
-      }
-      
       const existingProgress = getProgressForVerb(verbId);
       
       try {
         if (existingProgress) {
-          const updatedProgress = { ...existingProgress, mastered: true, last_reviewed: new Date().toISOString() };
-          const result = await window.dataSdk.update(updatedProgress);
-          if (result.isOk) {
-            showToast("🎄 Card marked as mastered! 🎁");
-          } else {
-            showToast("❌ Failed to update progress");
-          }
+          existingProgress.mastered = true;
+          existingProgress.last_reviewed = new Date().toISOString();
         } else {
-          const newProgress = {
+          progressData.push({
             verb_id: verbId,
             mastered: true,
             last_reviewed: new Date().toISOString()
-          };
-          const result = await window.dataSdk.create(newProgress);
-          if (result.isOk) {
-            showToast("🎄 Card marked as mastered! 🎁");
-          } else {
-            showToast("❌ Failed to save progress");
-          }
+          });
         }
+        saveProgressToStorage();
+        updateProgressDisplay();
+        renderCards();
+        showToast("🎄 Card marked as mastered! 🎁");
       } catch (error) {
         showToast("❌ An error occurred");
       }
@@ -854,17 +825,12 @@
     }
     
     async function resetProgress() {
-      if (!isInitialized) {
-        showToast("❌ Data system not ready");
-        return;
-      }
-      
       const confirmReset = document.createElement('div');
       confirmReset.className = 'fixed inset-0 flex items-center justify-center z-50';
       confirmReset.style.background = 'rgba(0, 0, 0, 0.8)';
       confirmReset.innerHTML = `
         <div class="p-8 rounded-2xl shadow-2xl max-w-sm" style="background: linear-gradient(135deg, #ffffff 0%, #fef3c7 100%); border: 4px solid #fef08a;">
-          <p class="text-xl font-bold mb-6 text-center" style="color: #dc2626;">🎄 Reset all progress? 🎄</p>
+          <p class="text-xl font-bold mb-6 text-center" style="color: #dc2626;">🎄 Reset all progress? ❄️</p>
           <div class="flex gap-3">
             <button id="confirm-reset" class="flex-1 px-6 py-3 rounded-lg font-semibold shadow-lg" 
                     style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: #ffffff; border: 2px solid #fef08a;">
@@ -884,9 +850,10 @@
       if (confirmBtn) {
         confirmBtn.addEventListener('click', async () => {
           try {
-            for (const progress of progressData) {
-              await window.dataSdk.delete(progress);
-            }
+            progressData = [];
+            saveProgressToStorage();
+            updateProgressDisplay();
+            renderCards();
             showToast("🔄 Progress reset! ⭐");
           } catch (error) {
             showToast("❌ Failed to reset progress");
@@ -916,117 +883,6 @@
           toast.style.transform = 'translateY(24rem)';
         }, 2500);
       }
-    }
-    
-    async function onConfigChange(config) {
-      const titleElement = document.getElementById('app-title');
-      const instructionsElement = document.getElementById('instructions');
-      const flashcardsBtnElement = document.getElementById('flashcards-mode-btn');
-      const jeopardyBtnElement = document.getElementById('jeopardy-mode-btn');
-      const shuffleBtnElement = document.getElementById('shuffle-btn');
-      const resetBtnElement = document.getElementById('reset-btn');
-      const backBtn1Element = document.getElementById('back-to-menu-1');
-      const backBtn2Element = document.getElementById('back-to-menu-2');
-      
-      if (titleElement) {
-        titleElement.textContent = `🎄 ${config.app_title || defaultConfig.app_title} 🎄`;
-      }
-      if (instructionsElement) {
-        instructionsElement.textContent = `❄️ ${config.instructions_text || defaultConfig.instructions_text} ❄️`;
-      }
-      if (flashcardsBtnElement) {
-        flashcardsBtnElement.innerHTML = `🎴 ${config.flashcards_button || defaultConfig.flashcards_button}`;
-      }
-      if (jeopardyBtnElement) {
-        jeopardyBtnElement.innerHTML = `🎯 ${config.jeopardy_button || defaultConfig.jeopardy_button}`;
-      }
-      if (shuffleBtnElement) {
-        shuffleBtnElement.innerHTML = `🔀 ${config.shuffle_button_text || defaultConfig.shuffle_button_text}`;
-      }
-      if (resetBtnElement) {
-        resetBtnElement.innerHTML = `🔄 ${config.reset_button_text || defaultConfig.reset_button_text}`;
-      }
-      if (backBtn1Element) {
-        backBtn1Element.innerHTML = `⬅️ ${config.back_button_text || defaultConfig.back_button_text}`;
-      }
-      if (backBtn2Element) {
-        backBtn2Element.innerHTML = `⬅️ ${config.back_button_text || defaultConfig.back_button_text}`;
-      }
-    }
-    
-    if (window.elementSdk) {
-      window.elementSdk.init({
-        defaultConfig,
-        onConfigChange,
-        mapToCapabilities: (config) => ({
-          recolorables: [
-            {
-              get: () => config.background_color || defaultConfig.background_color,
-              set: (value) => {
-                if (window.elementSdk && window.elementSdk.config) {
-                  window.elementSdk.config.background_color = value;
-                  window.elementSdk.setConfig({ background_color: value });
-                }
-              }
-            },
-            {
-              get: () => config.card_front_color || defaultConfig.card_front_color,
-              set: (value) => {
-                if (window.elementSdk && window.elementSdk.config) {
-                  window.elementSdk.config.card_front_color = value;
-                  window.elementSdk.setConfig({ card_front_color: value });
-                }
-              }
-            },
-            {
-              get: () => config.text_color || defaultConfig.text_color,
-              set: (value) => {
-                if (window.elementSdk && window.elementSdk.config) {
-                  window.elementSdk.config.text_color = value;
-                  window.elementSdk.setConfig({ text_color: value });
-                }
-              }
-            },
-            {
-              get: () => config.accent_color || defaultConfig.accent_color,
-              set: (value) => {
-                if (window.elementSdk && window.elementSdk.config) {
-                  window.elementSdk.config.accent_color = value;
-                  window.elementSdk.setConfig({ accent_color: value });
-                }
-              }
-            }
-          ],
-          borderables: [],
-          fontEditable: {
-            get: () => config.font_family || defaultConfig.font_family,
-            set: (value) => {
-              if (window.elementSdk && window.elementSdk.config) {
-                window.elementSdk.config.font_family = value;
-                window.elementSdk.setConfig({ font_family: value });
-              }
-            }
-          },
-          fontSizeable: {
-            get: () => config.font_size || defaultConfig.font_size,
-            set: (value) => {
-              if (window.elementSdk && window.elementSdk.config) {
-                window.elementSdk.config.font_size = value;
-                window.elementSdk.setConfig({ font_size: value });
-              }
-            }
-          }
-        }),
-        mapToEditPanelValues: (config) => new Map([
-          ["app_title", config.app_title || defaultConfig.app_title],
-          ["instructions_text", config.instructions_text || defaultConfig.instructions_text],
-          ["flashcards_button", config.flashcards_button || defaultConfig.flashcards_button],
-          ["jeopardy_button", config.jeopardy_button || defaultConfig.jeopardy_button],
-          ["shuffle_button_text", config.shuffle_button_text || defaultConfig.shuffle_button_text],
-          ["reset_button_text", config.reset_button_text || defaultConfig.reset_button_text],
-          ["back_button_text", config.back_button_text || defaultConfig.back_button_text]
-        ])
-      });
     }
     
     const flashcardsBtn = document.getElementById('flashcards-mode-btn');
@@ -1078,5 +934,5 @@
     createSnowflakes();
     initializeApp();
   </script>
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b46c2f8b232f78c',t:'MTc2NjgxNjk0Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b46da1c80078d6e',t:'MTc2NjgxNzg5NC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
